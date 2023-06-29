@@ -147,125 +147,8 @@ def run(request):
                 }
                 return pt_summary
 
-            def benchmark_torch():
-                phase = "test"
-                test_accuracy = 0
-                counter = 0
-                correct = 0
-                all_output = []
-                all_predicted = []
-                all_target = []
-                durs=[]
-
-                for index, subjects_batch in enumerate(loader[phase]):
-                    sample_batch = subjects_batch[0]
-                    break
-
-                with torch.no_grad():
-                    torch_model = torch.jit.trace(modelx, sample_batch)
-                    torch_model = torch.jit.freeze(torch_model)
-
-                print(f"\n==== Benchmarking PT inference with Test Data on CPU ====")
-                
-                for index, subjects_batch in enumerate(loader[phase]):
-                    data = subjects_batch[0]
-                    data = data.to(target_device)
-                    target = subjects_batch[1]
-                    target = target.to(target_device)
-
-                    
-                    with torch.no_grad():
-                        start_time = time.time()
-                        output = torch_model(data)
-                        latency = time.time() - start_time
-                        durs.append(latency)
-
-                    # Accuracy:
-                    _, predicted = F.softmax(output, dim=1).max(1)
-                    counter += data.size(0)
-                    correct += predicted.eq(target).sum().item()
-                    all_predicted += list(predicted.cpu().detach().numpy())
-                    all_output += list(output.cpu().detach().numpy())
-                    all_target += list(target.cpu().detach().numpy())
-
-                print(f"Torch Summary:")
-                # calculate average loss over an epoch
-                print(f"Num subjects: {counter}, Loop index: {index}")
-                test_accuracy = 100.0 * correct / counter
-                print(f"Test Accuracy: {test_accuracy:1.0f}%")
-                torch_time_sec = np.mean(durs[10:])
-                print(f"Time Taken : {torch_time_sec:.2f} seconds")
-
-                # Return the result
-                torch_summary = {
-                    "fwk_version": f"PyTorch: {torch.__version__}",
-                    "num_subjects": counter,
-                    "test_accuracy": test_accuracy,
-                    "time_sec": torch_time_sec,
-                }
-                return torch_summary
-
-            def benchmark_ipex_eager():
-                
-                import intel_extension_for_pytorch as ipex
-                ipex_modelx = ipex.optimize(modelx)
-
-                phase = "test"
-                test_accuracy = 0
-                counter = 0
-                correct = 0
-                all_output = []
-                all_predicted = []
-                all_target = []
-                durs=[]
-
-                for index, subjects_batch in enumerate(loader[phase]):
-                    sample_batch = subjects_batch[0]
-                    break
-
-                print(f"\n==== Benchmarking IPEX inference with Test Data on CPU ====")
-                
-                for index, subjects_batch in enumerate(loader[phase]):
-                    data = subjects_batch[0]
-                    data = data.to(target_device)
-                    target = subjects_batch[1]
-                    target = target.to(target_device)
-
-                    with torch.no_grad():
-                        start_time = time.time()
-                        output = ipex_modelx(data)
-                        latency = time.time() - start_time
-                        durs.append(latency)
-
-                    # Accuracy:
-                    _, predicted = F.softmax(output, dim=1).max(1)
-                    counter += data.size(0)
-                    correct += predicted.eq(target).sum().item()
-                    all_predicted += list(predicted.cpu().detach().numpy())
-                    all_output += list(output.cpu().detach().numpy())
-                    all_target += list(target.cpu().detach().numpy())
-
-                print(f"IPEX Eager mode Summary:")
-                # calculate average loss over an epoch
-                print(f"Num subjects: {counter}, Loop index: {index}")
-                test_accuracy = 100.0 * correct / counter
-                print(f"Test Accuracy: {test_accuracy:1.0f}%")
-                ipex_eager_time_sec = np.mean(durs[10:])
-                print(f"Time Taken : {ipex_eager_time_sec:.2f} seconds")
-
-                # Return the result
-                ipex_eager_summary = {
-                    "fwk_version": f"IPEX: {ipex.__version__}",
-                    "num_subjects": counter,
-                    "test_accuracy": test_accuracy,
-                    "time_sec": ipex_eager_time_sec,
-                }
-                return ipex_eager_summary
-
-
             def benchmark_ipex():
-                
-                
+                              
                 import intel_extension_for_pytorch as ipex
                 ipex_modelx = ipex.optimize(modelx)
 
@@ -417,23 +300,13 @@ def run(request):
             #
             # file_bytes = request.files["image"]
 
-            # Benchmark PyTorch eager
+            # Benchmark PyTorch 
             pt_summary = benchmark_pt()
-            print(f"PyTorch Eager Output: {pt_summary}")
-            
-            #Benchmmark PyTorch Graph
-            torch_summary = None
-            #torch_summary = benchmark_torch()
-            #print(f"PyTorch Graph Output: {torch_summary}")
+            print(f"PyTorch Output: {pt_summary}")
 
-            #Benchmark IPEX eager
-            ipex_eager_summary = None
-            #ipex_eager_summary = benchmark_ipex_eager()
-            #print(f"IPEX Eager Output: {ipex_eager_summary}")
-
-            # Benchmark IPEX Graph
+            # Benchmark IPEX 
             ipex_summary = benchmark_ipex()
-            print(f"IPEX Graph Output: {ipex_summary}")
+            print(f"IPEX Output: {ipex_summary}")
 
             # Benchmark OpenVINO
             ov_summary = benchmark_ov()
@@ -443,9 +316,7 @@ def run(request):
 
             return_data = {
                 "pt_summary": pt_summary,
-                "torch_summary":torch_summary,
                 "ipex_summary": ipex_summary,
-                "ipex_eager_summary" : ipex_eager_summary,
                 "ov_summary": ov_summary,
                 "system_info": sys_info,
             }
