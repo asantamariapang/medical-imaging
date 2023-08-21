@@ -80,7 +80,7 @@ def init():
     # Initialize OpenVINO Runtime.
     global ov_compiled_model
     ov_core = Core()
-    ov_xml = pt_model_path = os.path.join(az_model_base_path, "fmri_model_final25D.xml")
+    ov_xml = os.path.join(az_model_base_path, "fmri_model_final25D.xml")
     # Load and compile the OV model
     ov_model = ov_core.read_model(ov_xml)
     ov_compiled_model = ov_core.compile_model(model=ov_model, device_name=target_device.upper())
